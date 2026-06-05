@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#234721" />
+    <title>НИКА - Питомец на день</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+    <div class="pixel-field" aria-hidden="true">
+      <span></span><span></span><span></span><span></span>
+    </div>
+    <main class="app-shell">
+      <header class="topbar">
+        <img class="brand-logo" src="./assets/logo_nika_white.png" alt="НИКА" />
+        <div class="topbar__actions">
+          <button class="ghost-button" type="button" data-action="export-csv">CSV</button>
+          <button class="ghost-button" type="button" data-action="reset-demo">Сброс</button>
+        </div>
+      </header>
+
+      <section class="hero screen is-active" data-screen="intro" aria-labelledby="hero-title">
+        <div class="hero__copy">
+          <p class="pixel-label">Питомец на день</p>
+          <h1 id="hero-title">Заведи своего подопечного на пикнике</h1>
+          <p class="hero__text">
+            Ответь на несколько вопросов, получи питомца дня и забери физическую карточку у волонтёра.
+          </p>
+          <button class="primary-button hero-cta" type="button" data-action="start">Завести питомца</button>
+        </div>
+        <div class="hero__device" aria-label="Игровой экран">
+          <div class="device-spark spark-a"></div>
+          <div class="device-spark spark-b"></div>
+          <div class="pixel-screen">
+            <div class="screen-kitten" aria-hidden="true">
+              <div class="pixel-kitten">
+                <span class="kitten-tail"></span>
+                <span class="kitten-body"></span>
+                <span class="kitten-head"></span>
+                <span class="kitten-paw"></span>
+                <span class="kitten-ball"></span>
+              </div>
+            </div>
+            <div class="screen-status">ready</div>
+          </div>
+          <div class="device-buttons">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="form" aria-labelledby="form-title">
+        <div class="panel compact-panel">
+          <p class="pixel-label">Регистрация</p>
+          <h2 id="form-title">Как к тебе обращаться?</h2>
+          <form id="visitor-form" class="visitor-form">
+            <label>
+              Имя
+              <input name="name" autocomplete="given-name" required placeholder="Например, Дима" />
+            </label>
+            <label>
+              Телефон или Telegram
+              <input name="contact" autocomplete="tel" placeholder="Опционально" />
+            </label>
+            <label>
+              Email
+              <input name="email" autocomplete="email" placeholder="Опционально" />
+            </label>
+            <label class="consent">
+              <input name="consent" type="checkbox" required />
+              <span>Согласен на обработку данных для участия в квесте</span>
+            </label>
+            <div class="form-error" role="alert"></div>
+            <button class="primary-button" type="submit">К вопросам</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="quiz" aria-labelledby="quiz-title">
+        <div class="panel quiz-panel">
+          <div class="quiz-top">
+            <p class="pixel-label">Подбор</p>
+            <div class="progress-dots" aria-hidden="true"></div>
+          </div>
+          <h2 id="quiz-title"></h2>
+          <div class="choice-grid" id="choice-grid"></div>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="matching" aria-labelledby="matching-title">
+        <div class="matching-card">
+          <p class="pixel-label">Загрузка</p>
+          <h2 id="matching-title">Ищем питомца</h2>
+          <div class="scan-box" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="result" aria-live="polite">
+        <article class="pet-card" id="pet-card"></article>
+      </section>
+
+      <section class="screen" data-screen="volunteer" aria-labelledby="volunteer-title">
+        <div class="volunteer-card">
+          <div class="ticket-pixel" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <p class="pixel-label">Карточка готова</p>
+          <h2 id="volunteer-title">Подойдите к волонтёру</h2>
+          <p>
+            Назовите имя питомца. Волонтёр выдаст физическую карточку, и следующий участник сможет начать заново.
+          </p>
+          <div class="volunteer-actions">
+            <button class="primary-button hero-cta" type="button" data-action="restart-flow">Начать заново</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <template id="pet-card-template">
+      <div class="pet-card__media">
+        <img class="pet-photo" alt="" />
+        <img class="pet-logo" src="./assets/logo_nika_white.png" alt="НИКА" />
+        <div class="pixel-heart" aria-hidden="true"></div>
+      </div>
+      <div class="pet-card__body">
+        <div class="pet-name-row">
+          <h2 class="pet-name"></h2>
+          <span class="card-code"></span>
+        </div>
+        <div class="pet-meta"></div>
+        <div class="tag-row"></div>
+        <p class="pet-story"></p>
+        <div class="care-callout"></div>
+        <div class="card-actions">
+          <button class="primary-button hero-cta" type="button" data-action="go-pickup">Забрать карточку</button>
+          <a class="secondary-button source-link" target="_blank" rel="noreferrer">Страница животного</a>
+        </div>
+      </div>
+    </template>
+
+    <script src="./data/animals.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
