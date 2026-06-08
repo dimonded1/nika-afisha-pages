@@ -7,7 +7,6 @@ const STORAGE_KEYS = {
 
 const MAX_DAILY_COPIES = 3;
 const RECENT_BLOCK = 4;
-const REMOTE_TIMEOUT_MS = 5000;
 
 const questions = [
   {
@@ -160,81 +159,6 @@ function saveAssignment(record) {
   writeJson(STORAGE_KEYS.assignments, assignments);
 }
 
-function getRemoteConfig() {
-  const config = window.NIKA_CONFIG || {};
-  const endpoint = String(config.submissionsEndpoint || "").replace(/\/+$/, "");
-  return {
-    endpoint,
-    writeKey: String(config.writeKey || ""),
-  };
-}
-
-function hasRemoteStorage() {
-  return Boolean(getRemoteConfig().endpoint);
-}
-
-function withTimeout(promise, timeout = REMOTE_TIMEOUT_MS) {
-  const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), timeout);
-  return {
-    signal: controller.signal,
-    run: promise(controller.signal).finally(() => window.clearTimeout(timer)),
-  };
-}
-
-async function remoteFetch(path, options = {}) {
-  const config = getRemoteConfig();
-  if (!config.endpoint) throw new Error("Remote storage is not configured.");
-
-  const headers = new Headers(options.headers || {});
-  if (config.writeKey) headers.set("x-write-key", config.writeKey);
-
-  const request = (signal) => fetch(`${config.endpoint}${path}`, {
-    ...options,
-    headers,
-    signal,
-  });
-  const { run } = withTimeout(request);
-  const response = await run;
-  if (!response.ok) {
-    const message = await response.text().catch(() => "");
-    throw new Error(message || `Remote request failed: ${response.status}`);
-  }
-  return response;
-}
-
-async function loadRemoteStats() {
-  if (!hasRemoteStorage()) return null;
-  try {
-    const response = await remoteFetch("/stats");
-    const stats = await response.json();
-    if (!stats || stats.date !== todayKey()) return null;
-    return {
-      date: stats.date,
-      counts: stats.counts || {},
-      recent: Array.isArray(stats.recent) ? stats.recent.slice(0, RECENT_BLOCK) : [],
-    };
-  } catch (error) {
-    console.warn("Не удалось получить статистику из GitHub-базы, используем локальную.", error);
-    return null;
-  }
-}
-
-async function syncAssignment(record) {
-  if (!hasRemoteStorage()) return false;
-  try {
-    await remoteFetch("/submission", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(record),
-    });
-    return true;
-  } catch (error) {
-    console.warn("Не удалось отправить выдачу в GitHub-базу, запись сохранена локально.", error);
-    return false;
-  }
-}
-
 function showScreen(name) {
   $$(".screen").forEach((screen) => {
     screen.classList.toggle("is-active", screen.dataset.screen === name);
@@ -346,7 +270,8 @@ function animalScore(animal, stats) {
   return score;
 }
 
-function selectAnimal(stats = getStats()) {
+function selectAnimal() {
+  const stats = getStats();
   const animals = Array.isArray(window.NIKA_ANIMALS) ? window.NIKA_ANIMALS : [];
   const speciesFiltered = state.answers.species === "any"
     ? animals
@@ -363,26 +288,16 @@ function selectAnimal(stats = getStats()) {
   return top[Math.floor(Math.random() * top.length)]?.animal || animals[0];
 }
 
-function updateIssueStats(stats, animalId) {
-  const nextStats = {
-    date: todayKey(),
-    counts: { ...(stats?.counts || {}) },
-    recent: Array.isArray(stats?.recent) ? [...stats.recent] : [],
-  };
-  nextStats.counts[animalId] = (nextStats.counts[animalId] || 0) + 1;
-  nextStats.recent = [animalId, ...nextStats.recent.filter((id) => id !== animalId)].slice(0, RECENT_BLOCK);
-  return nextStats;
-}
-
 function runMatching() {
   showScreen("matching");
-  window.setTimeout(async () => {
-    const baseStats = await loadRemoteStats() || getStats();
-    const selected = selectAnimal(baseStats);
+  window.setTimeout(() => {
+    const selected = selectAnimal();
     state.selected = selected;
     state.completedStations = new Set();
 
-    const stats = updateIssueStats(baseStats, selected.id);
+    const stats = getStats();
+    stats.counts[selected.id] = (stats.counts[selected.id] || 0) + 1;
+    stats.recent = [selected.id, ...stats.recent.filter((id) => id !== selected.id)].slice(0, RECENT_BLOCK);
     saveStats(stats);
 
     const assignment = {
@@ -398,10 +313,8 @@ function runMatching() {
       sourceUrl: selected.sourceUrl || "",
       answers: { ...state.answers },
       dailyCountAfterIssue: stats.counts[selected.id],
-      storageMode: hasRemoteStorage() ? "remote" : "local",
     };
     saveAssignment(assignment);
-    syncAssignment(assignment);
     writeJson(STORAGE_KEYS.current, assignment);
 
     renderPetCard(selected);
@@ -452,32 +365,11 @@ function toCsvValue(value) {
   return `"${text.replace(/"/g, '""')}"`;
 }
 
-function downloadBlob(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-async function exportRemoteCsv() {
-  const adminKey = window.prompt("Код выгрузки CSV");
-  if (!adminKey) return false;
-
-  const response = await remoteFetch(`/export?key=${encodeURIComponent(adminKey)}`);
-  const blob = await response.blob();
-  downloadBlob(blob, `nika-afisha-assignments-all-${todayKey()}.csv`);
-  return true;
-}
-
-function exportLocalCsv() {
+function exportCsv() {
   const rows = getAssignments();
   if (!rows.length) {
     alert("Пока нет выдач для экспорта.");
-    return false;
+    return;
   }
   const columns = [
     "time",
@@ -492,28 +384,21 @@ function exportLocalCsv() {
     "sourceUrl",
     "answers",
     "dailyCountAfterIssue",
-    "storageMode",
   ];
   const csv = [
     columns.join(","),
     ...rows.map((row) => columns.map((column) => toCsvValue(row[column])).join(",")),
   ].join("\n");
-  downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), `nika-afisha-assignments-local-${todayKey()}.csv`);
-  return true;
-}
 
-async function exportCsv() {
-  if (hasRemoteStorage()) {
-    try {
-      await exportRemoteCsv();
-      return;
-    } catch (error) {
-      console.warn("Не удалось скачать CSV из GitHub-базы.", error);
-      alert("Не удалось скачать общий CSV. Скачаю локальную резервную выгрузку с этого устройства.");
-    }
-  }
-
-  exportLocalCsv();
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `nika-afisha-assignments-${todayKey()}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 function resetDemo() {
