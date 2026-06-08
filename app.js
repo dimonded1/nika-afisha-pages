@@ -176,6 +176,11 @@ function renderQuestion() {
   const question = questions[state.questionIndex];
   $("#quiz-title").textContent = question.title;
 
+  const backButton = $("[data-action='prev-question']");
+  if (backButton) {
+    backButton.disabled = state.questionIndex === 0;
+  }
+
   const dots = $(".progress-dots");
   dots.innerHTML = "";
   questions.forEach((_, index) => {
@@ -202,6 +207,16 @@ function renderQuestion() {
     });
     grid.appendChild(button);
   });
+}
+
+function goToPreviousQuestion() {
+  if (state.questionIndex === 0) return;
+  const currentQuestion = questions[state.questionIndex];
+  state.questionIndex -= 1;
+  const previousQuestion = questions[state.questionIndex];
+  delete state.answers[currentQuestion.id];
+  delete state.answers[previousQuestion.id];
+  renderQuestion();
 }
 
 function animalScore(animal, stats) {
@@ -316,7 +331,9 @@ function renderPetCard(animal) {
   img.src = animal.photo || "./assets/reference-card.png";
   img.alt = cleanText(`Фото: ${animal.name}`);
 
-  $(".pet-name", template).textContent = cleanText(animal.name, 42);
+  const petName = $(".pet-name", template);
+  petName.textContent = cleanText(animal.name, 64);
+  petName.classList.toggle("is-long", animal.name.length > 11 || animal.name.includes(" "));
   $(".card-code", template).textContent = animal.cardId;
 
   const meta = [speciesLabel(animal.species), animal.gender, animal.age].filter(Boolean).join(" • ");
@@ -437,6 +454,9 @@ function init() {
 
   document.addEventListener("click", (event) => {
     const action = event.target.closest("[data-action]")?.dataset.action;
+    if (action === "prev-question") {
+      goToPreviousQuestion();
+    }
     if (action === "go-pickup") {
       showScreen("volunteer");
     }
