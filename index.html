@@ -58,11 +58,11 @@
           <h2 id="form-title">Как к тебе обращаться?</h2>
           <form id="visitor-form" class="visitor-form">
             <label>
-              Имя
-              <input name="name" autocomplete="given-name" required placeholder="Например, Дима" />
+              Имя и фамилия
+              <input name="name" autocomplete="name" required placeholder="Например, Дима Иванов" />
             </label>
             <label>
-              Телефон или Telegram
+              Telegram или телефон
               <input name="contact" autocomplete="tel" placeholder="Опционально" />
             </label>
             <label>
@@ -147,6 +147,7 @@
     </template>
 
     <script src="./data/animals.js"></script>
+    <script src="./config.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>
