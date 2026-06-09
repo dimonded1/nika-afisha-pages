@@ -15,8 +15,11 @@
     </div>
     <main class="app-shell">
       <header class="topbar">
-        <img class="brand-logo" src="./assets/logo_nika_white.png" alt="НИКА" />
-        <div class="topbar__actions">
+        <button class="brand-button" type="button" data-action="toggle-admin" aria-expanded="false" aria-controls="staff-panel">
+          <img class="brand-logo" src="./assets/logo_nika_white.png" alt="НИКА" />
+        </button>
+        <div class="topbar__actions" id="staff-panel" hidden>
+          <span class="staff-label">панель волонтёра</span>
           <button class="ghost-button" type="button" data-action="export-csv">CSV</button>
           <button class="ghost-button" type="button" data-action="reset-demo">Сброс</button>
         </div>
@@ -25,9 +28,9 @@
       <section class="hero screen is-active" data-screen="intro" aria-labelledby="hero-title">
         <div class="hero__copy">
           <p class="pixel-label">Питомец на день</p>
-          <h1 id="hero-title">Заведи своего подопечного на пикнике</h1>
+          <h1 id="hero-title">Заведи питомца на день</h1>
           <p class="hero__text">
-            Ответь на несколько вопросов, получи питомца дня и забери физическую карточку у волонтёра.
+            Ответь на короткий квиз, получи подопечного и забери его карточку у волонтёра.
           </p>
           <button class="primary-button hero-cta" type="button" data-action="start">Завести питомца</button>
         </div>
@@ -58,11 +61,11 @@
           <h2 id="form-title">Как к тебе обращаться?</h2>
           <form id="visitor-form" class="visitor-form">
             <label>
-              Имя
-              <input name="name" autocomplete="given-name" required placeholder="Например, Дима" />
+              Имя и фамилия
+              <input name="name" autocomplete="name" required placeholder="Например, Дима Иванов" />
             </label>
             <label>
-              Телефон или Telegram
+              Telegram или телефон
               <input name="contact" autocomplete="tel" placeholder="Опционально" />
             </label>
             <label>
@@ -126,11 +129,15 @@
 
     <template id="pet-card-template">
       <div class="pet-card__media">
-        <img class="pet-photo" alt="" />
+        <img class="pet-photo" src="./assets/logo_nika_white.png" alt="" />
         <img class="pet-logo" src="./assets/logo_nika_white.png" alt="НИКА" />
         <div class="pixel-heart" aria-hidden="true"></div>
       </div>
       <div class="pet-card__body">
+        <div class="card-ribbon">
+          <span>Питомец на день</span>
+          <i aria-hidden="true"></i>
+        </div>
         <div class="pet-name-row">
           <h2 class="pet-name"></h2>
           <span class="card-code"></span>

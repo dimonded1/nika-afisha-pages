@@ -165,6 +165,16 @@ function showScreen(name) {
   });
 }
 
+function setAdminPanel(open) {
+  const panel = $("#staff-panel");
+  const trigger = $("[data-action='toggle-admin']");
+  if (!panel || !trigger) return;
+
+  panel.hidden = !open;
+  panel.classList.toggle("is-open", open);
+  trigger.setAttribute("aria-expanded", String(open));
+}
+
 function startQuiz() {
   state.questionIndex = 0;
   state.answers = {};
@@ -408,6 +418,7 @@ function resetDemo() {
   state.answers = {};
   state.selected = null;
   state.completedStations = new Set();
+  setAdminPanel(false);
   showScreen("intro");
 }
 
@@ -426,6 +437,11 @@ function init() {
   $("[data-action='start']").addEventListener("click", () => showScreen("form"));
   $("[data-action='export-csv']").addEventListener("click", exportCsv);
   $("[data-action='reset-demo']").addEventListener("click", resetDemo);
+  $("[data-action='toggle-admin']").addEventListener("click", (event) => {
+    event.stopPropagation();
+    const panel = $("#staff-panel");
+    setAdminPanel(panel?.hidden ?? true);
+  });
 
   $("#visitor-form").addEventListener("submit", (event) => {
     event.preventDefault();
@@ -454,6 +470,9 @@ function init() {
 
   document.addEventListener("click", (event) => {
     const action = event.target.closest("[data-action]")?.dataset.action;
+    if (!event.target.closest(".topbar__actions") && action !== "toggle-admin") {
+      setAdminPanel(false);
+    }
     if (action === "prev-question") {
       goToPreviousQuestion();
     }
