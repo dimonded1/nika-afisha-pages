@@ -159,10 +159,26 @@ function saveAssignment(record) {
   writeJson(STORAGE_KEYS.assignments, assignments);
 }
 
-function showScreen(name) {
-  $$(".screen").forEach((screen) => {
-    screen.classList.toggle("is-active", screen.dataset.screen === name);
+function restartScreenAnimations(screen) {
+  if (!screen) return;
+  const animated = $$(".pixel-kitten, .kitten-tail, .kitten-head, .kitten-paw, .kitten-ball, .hero-cta, .device-spark, .screen-status", screen);
+  animated.forEach((element) => {
+    element.style.animation = "none";
   });
+  void screen.offsetHeight;
+  animated.forEach((element) => {
+    element.style.animation = "";
+  });
+}
+
+function showScreen(name) {
+  let activeScreen = null;
+  $$(".screen").forEach((screen) => {
+    const isActive = screen.dataset.screen === name;
+    screen.classList.toggle("is-active", isActive);
+    if (isActive) activeScreen = screen;
+  });
+  window.requestAnimationFrame(() => restartScreenAnimations(activeScreen));
 }
 
 function setAdminPanel(open) {
@@ -288,13 +304,18 @@ function selectAnimal() {
     : animals.filter((animal) => animal.species === state.answers.species);
   const basePool = speciesFiltered.length ? speciesFiltered : animals;
   const underLimit = basePool.filter((animal) => (stats.counts[animal.id] || 0) < MAX_DAILY_COPIES);
-  const pool = underLimit.length >= 3 ? underLimit : basePool;
+  const available = underLimit.length ? underLimit : animals.filter((animal) => (stats.counts[animal.id] || 0) < MAX_DAILY_COPIES);
+  const nonRecent = available.filter((animal) => !stats.recent.includes(animal.id));
+  const pool = nonRecent.length ? nonRecent : available;
+  if (!pool.length) return null;
+  const lowestIssuedCount = Math.min(...pool.map((animal) => stats.counts[animal.id] || 0));
+  const balancedPool = pool.filter((animal) => (stats.counts[animal.id] || 0) === lowestIssuedCount);
 
-  const ranked = pool
+  const ranked = balancedPool
     .map((animal) => ({ animal, score: animalScore(animal, stats) }))
     .sort((a, b) => b.score - a.score);
 
-  const top = ranked.slice(0, Math.min(7, ranked.length));
+  const top = ranked.slice(0, Math.min(9, ranked.length));
   return top[Math.floor(Math.random() * top.length)]?.animal || animals[0];
 }
 
@@ -302,6 +323,11 @@ function runMatching() {
   showScreen("matching");
   window.setTimeout(() => {
     const selected = selectAnimal();
+    if (!selected) {
+      alert("Все карточки на этом устройстве уже выданы по 3 раза. Позовите волонтёра для сброса счётчика.");
+      showScreen("intro");
+      return;
+    }
     state.selected = selected;
     state.completedStations = new Set();
 
@@ -344,7 +370,7 @@ function renderPetCard(animal) {
   const petName = $(".pet-name", template);
   petName.textContent = cleanText(animal.name, 64);
   petName.classList.toggle("is-long", animal.name.length > 11 || animal.name.includes(" "));
-  $(".card-code", template).textContent = animal.cardId;
+  petName.classList.toggle("is-single-word", !animal.name.includes(" "));
 
   const meta = [speciesLabel(animal.species), animal.gender, animal.age].filter(Boolean).join(" • ");
   $(".pet-meta", template).textContent = cleanText(meta);
@@ -364,7 +390,7 @@ function renderPetCard(animal) {
   if (animal.sourceUrl) {
     source.href = animal.sourceUrl;
   } else {
-    source.hidden = true;
+    source.remove();
   }
 
   card.appendChild(template);
